@@ -9,6 +9,12 @@ pool_root=/mnt/btrfs_pool_2_main
 active_dir=__active
 snapshot_dir=__snapshots
 
+catch() {
+    errormsg="${1:-}"
+    trap '' ERR
+    echo $errormsg
+}
+
 trap 'catch "Error caught ($jobid: line $LINENO, exit code $?)"' ERR
 
 ionice -c 3 -p $$
