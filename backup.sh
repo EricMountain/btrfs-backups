@@ -54,9 +54,9 @@ for x in * ; do
 
     # Send snapshot to target.  On success, remove previous local parent
     # snapshots for current target device as they are no longer needed.
-    # Expiring backups on the target is the responsibility of the
-    # target, hence not handled here.  On failure, clean up to ensure
-    # future backups don't try to use invalid snapshots.
+    # Expiring backups on the target is its responsibility, hence not
+    # handled here.  On failure, clean up to ensure future backups don't
+    # try to use invalid snapshots.
     if sudo btrfs send "${source_backup_path}/$x/${timestamp}_${target_uuid}" | \
             sudo btrfs receive "${target_snapshot_path}/$x" ; then
         for obsolete in $(ls -1d "${source_backup_path}/$x/"*"_${target_uuid}" | grep -v ${timestamp}) ; do
