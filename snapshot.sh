@@ -15,7 +15,7 @@ catch() {
     echo $errormsg
 }
 
-trap 'catch "Error caught ($jobid: line $LINENO, exit code $?)"' ERR
+trap 'catch "Error caught (line $LINENO, exit code $?)"' ERR
 
 ionice -c 3 -p $$
 renice -n 20 $$ > /dev/null 2>&1
