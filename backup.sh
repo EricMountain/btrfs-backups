@@ -37,9 +37,9 @@ target_uuid="("$(sudo btrfs fi show "${target_root}" | grep uuid | awk '{print $
 
 cd "${source_snapshot_path}"
 for x in * ; do
-    [[ "$x" == "test_1"* ]] || continue
+    #[[ "$x" == "test_1"* ]] || continue
     #[[ "$x" == "test_1"* || "$x" == "test_2"* ]] || continue
-    #[[ "$x" == "media1" || "$x" == "music" ]] || continue
+    [[ "$x" == "media1"* || "$x" == "music"* ]] || continue
     [[ -d "$x" ]] || continue
     [[ -d "${source_backup_path}/$x" ]] || sudo btrfs subvolume create "${source_backup_path}/$x"
     [[ -d "${target_snapshot_path}/$x" ]] || sudo btrfs subvolume create "${target_snapshot_path}/$x"
