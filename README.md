@@ -30,12 +30,17 @@ as follows:
 Snapshots of volumes in `__active` are created in the same pool under
 `__snapshots` as `name/timestamp`.
 
-Backups are performed by creating a snapshot from the latest volume in
-__snapshots for a given `name` and `btrfs-send`ing this snapshot to
+Backups are performed by creating a snapshots under `__backups` from volumes in
+__active and `btrfs-send`ing these snapshots to
 another pool.  The previous matching snapshot in __backups for the
 target device and name is used as parent for the `btrfs send` operation.
-The previous parent is discarded if the backup operation succeeds.
+The parent is discarded if the backup operation succeeds.
 
+## To do
+
+* Backup over ssh
+* systemd units
+* Snapshot expiry policies
 
 ## Hacks
 
