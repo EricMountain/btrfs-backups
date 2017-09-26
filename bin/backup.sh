@@ -58,7 +58,7 @@ for x in * ; do
     fi
 
     if ! sudo btrfs subvolume snapshot -r "$x" "${source_backup}_new" ; then
-        sudo btrfs subvolume delete "${source_backup}_new"
+        sudo btrfs subvolume delete "${source_backup}_new" || true
         echo $x: error creating snapshot, bailing
         exit 1
     fi
