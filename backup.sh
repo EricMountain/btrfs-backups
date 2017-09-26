@@ -39,11 +39,12 @@ source_uuid="("$(sudo btrfs fi show "${source_root}" | grep uuid | awk '{print $
 
 cd "${source_active_path}"
 for x in * ; do
-    #[[ "$x" == "test_1"* ]] || continue
-    #[[ "$x" == "test_1"* || "$x" == "test_2"* ]] || continue
-    [[ "$x" == "media1"* ]] || continue
-    #[[ "$x" == "media1"* || "$x" == "music"* ]] || continue
+    echo $x: starting backup
+
+    [[ "$x" == "media1"* || "$x" == "music"* ]] || continue
+
     [[ -d "$x" ]] || continue
+
     [[ -d "${source_backup_path}/${x}_${source_uuid}" ]] || sudo btrfs subvolume create "${source_backup_path}/${x}_${source_uuid}"
     [[ -d "${target_active_path}/${x}_${source_uuid}" ]] || sudo btrfs subvolume create "${target_active_path}/${x}_${source_uuid}"
 
@@ -70,6 +71,7 @@ for x in * ; do
         sudo mv "${source_backup}_new" "${source_backup}"
         [[ -d "${destination_active}" ]] && sudo btrfs subvolume delete "${destination_active}"
         sudo mv "${destination_active}_new" "${destination_active}"
+        echo $x: backed up
     else
         sudo btrfs subvolume delete "${source_backup}" || true
         sudo btrfs subvolume delete "${destination_active}_new" || true
