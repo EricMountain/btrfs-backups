@@ -26,14 +26,10 @@ timestamp=$(date -u +%Y%m%d-%H%M%S)
 
 [[ -d "${snapshot_path}" ]] || sudo mkdir -p "${snapshot_path}"
 
-# Avoid conflicts with identical source names coming from other pools
-# when backing up
-source_uuid="("$(sudo btrfs fi show "${pool_root}" | grep uuid | awk '{print $2, $4}' | sed -e "s/'//g" -e "s/ /+/")")+${active_dir}"
-
 cd "${active_path}"
 for x in * ; do
     [[ -d "$x" ]] || continue
-    snapshot_destination="${snapshot_path}/${x}_${source_uuid}"
+    snapshot_destination="${snapshot_path}/${x}"
     [[ -d "${snapshot_destination}" ]] || sudo btrfs subvolume create "${snapshot_destination}"
     sudo btrfs subvolume snapshot -r $x "${snapshot_destination}/${timestamp}"
 done
