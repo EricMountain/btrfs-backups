@@ -41,8 +41,6 @@ cd "${source_active_path}"
 for x in * ; do
     echo $x: starting backup
 
-    [[ "$x" == "media1"* || "$x" == "music"* ]] || continue
-
     [[ -d "$x" ]] || continue
 
     [[ -d "${source_backup_path}/${x}_${source_uuid}" ]] || sudo btrfs subvolume create "${source_backup_path}/${x}_${source_uuid}"
