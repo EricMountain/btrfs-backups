@@ -10,7 +10,7 @@ source_active_path="${source_root}/${source_active_dir}"
 source_backup_path="${source_root}/${source_backup_dir}"
 
 target_root=/mnt/btrfs_pool_1
-target_active_dir=__actives
+target_active_dir=__active
 target_active_path="${target_root}/${target_active_dir}"
 
 catch() {
