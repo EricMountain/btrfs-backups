@@ -39,11 +39,14 @@ source_uuid="("$(sudo btrfs fi show "${source_root}" | grep uuid | awk '{print $
 
 cd "${source_active_path}"
 for x in * ; do
-    echo $x: starting backup
-
     [[ -d "$x" ]] || continue
 
-    [[ -e "$x/.no_backup" ]] || continue
+    if [[ -e "$x/.no_backup" ]] ; then
+        echo $x: skipping due to .no_backup flag
+        continue
+    fi
+
+    echo $x: starting backup
 
     [[ -d "${source_backup_path}/${x}_${source_uuid}" ]] || sudo btrfs subvolume create "${source_backup_path}/${x}_${source_uuid}"
     [[ -d "${target_active_path}/${x}_${source_uuid}" ]] || sudo btrfs subvolume create "${target_active_path}/${x}_${source_uuid}"
