@@ -43,6 +43,8 @@ for x in * ; do
 
     [[ -d "$x" ]] || continue
 
+    [[ -e "$x/.no_backup" ]] || continue
+
     [[ -d "${source_backup_path}/${x}_${source_uuid}" ]] || sudo btrfs subvolume create "${source_backup_path}/${x}_${source_uuid}"
     [[ -d "${target_active_path}/${x}_${source_uuid}" ]] || sudo btrfs subvolume create "${target_active_path}/${x}_${source_uuid}"
 
