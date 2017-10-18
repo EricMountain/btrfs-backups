@@ -2,17 +2,6 @@
 
 set -euo pipefail
 
-# Config
-source_root=/mnt/btrfs_pool_2_main
-source_active_dir=__active
-source_backup_dir=__backups
-source_active_path="${source_root}/${source_active_dir}"
-source_backup_path="${source_root}/${source_backup_dir}"
-
-target_root=/mnt/btrfs_pool_1
-target_active_dir=__active
-target_active_path="${target_root}/${target_active_dir}"
-
 catch() {
     errormsg="${1:-}"
     trap '' ERR
@@ -21,8 +10,60 @@ catch() {
 
 trap 'catch "Error caught (line $LINENO, exit code $?)"' ERR
 
+usage() {
+    cat - <<EOF
+Usage: $0 [args]
+
+--source       Source btrfs pool
+--target       Target btrfs pool
+EOF
+
+    false
+}
+
+getopt=$(getopt -n $0 -o h -l source:,target:,help -- "$@")
+eval set -- "$getopt"
+
+declare source_root=""
+declare target_root=""
+
+while true ; do
+    case "$1" in
+        --source)
+            source_root=$2
+            shift 2
+            ;;
+        --target)
+            target_root=$2
+            shift 2
+            ;;
+        --help|h)
+            usage
+            ;;
+        --)
+            shift
+            break
+            ;;
+        *)
+            echo "Internal error processing options: $*"
+            false
+            ;;
+    esac
+done
+
+[[ -z ${source_root} ]] && echo Need --source. && false
+[[ -z ${target_root} ]] && echo Need --target. && false
+
 ionice -c 3 -p $$
 renice -n 20 $$ > /dev/null 2>&1
+
+source_active_dir=__active
+source_backup_dir=__backups
+source_active_path="${source_root}/${source_active_dir}"
+source_backup_path="${source_root}/${source_backup_dir}"
+
+target_active_dir=__active
+target_active_path="${target_root}/${target_active_dir}"
 
 [[ -d "${source_backup_path}" ]] || sudo mkdir -p "${source_backup_path}"
 [[ -d "${target_active_path}" ]] || sudo mkdir -p "${target_active_path}"
