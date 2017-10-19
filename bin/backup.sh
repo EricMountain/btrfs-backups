@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# e.g:
+# ./bin/backup.sh --source=/mnt/btrfs_pool_3_ssd --target=/mnt --target-shell "ssh -x eric@crucible.local"
+
 set -euo pipefail
 
 catch() {
@@ -21,11 +24,12 @@ EOF
     false
 }
 
-getopt=$(getopt -n $0 -o h -l source:,target:,help -- "$@")
+getopt=$(getopt -n $0 -o h -l source:,target:,target-shell:,help -- "$@")
 eval set -- "$getopt"
 
 declare source_root=""
 declare target_root=""
+declare target_shell=""
 
 while true ; do
     case "$1" in
@@ -35,6 +39,10 @@ while true ; do
             ;;
         --target)
             target_root=$2
+            shift 2
+            ;;
+        --target-shell)
+            target_shell="$2"
             shift 2
             ;;
         --help|h)
@@ -66,17 +74,17 @@ target_active_dir=__active
 target_active_path="${target_root}/${target_active_dir}"
 
 [[ -d "${source_backup_path}" ]] || sudo mkdir -p "${source_backup_path}"
-[[ -d "${target_active_path}" ]] || sudo mkdir -p "${target_active_path}"
+${target_shell} [[ -d "${target_active_path}" ]] || ${target_shell} sudo mkdir -p "${target_active_path}"
 
 # Whether sending locally or over ssh, wherever the destination device
 # is plugged, we will recognise it and update the last backup if
 # present, or send a full stream. Including the active directory in the
 # ID allows for multiple such directories on the destination.
-target_uuid="("$(sudo btrfs fi show "${target_root}" | grep uuid | awk '{print $2, $4}' | sed -e "s/'//g" -e "s/ /+/")+"${target_active_dir}"")"
+target_uuid=$(${target_shell} sudo btrfs fi show "${target_root}" | grep uuid | awk '{print $2, $4}' | sed -e "s/'//g" -e "s/ /+/")+"${target_active_dir}"
 
 # Avoid conflicts with identical source names coming from other pools
 # when backing up
-source_uuid="("$(sudo btrfs fi show "${source_root}" | grep uuid | awk '{print $2, $4}' | sed -e "s/'//g" -e "s/ /+/")")+${source_active_dir}"
+source_uuid=$(sudo btrfs fi show "${source_root}" | grep uuid | awk '{print $2, $4}' | sed -e "s/'//g" -e "s/ /+/")"+${source_active_dir}"
 
 cd "${source_active_path}"
 for x in * ; do
@@ -90,7 +98,7 @@ for x in * ; do
     echo $x: starting backup
 
     [[ -d "${source_backup_path}/${x}_${source_uuid}" ]] || sudo btrfs subvolume create "${source_backup_path}/${x}_${source_uuid}"
-    [[ -d "${target_active_path}/${x}_${source_uuid}" ]] || sudo btrfs subvolume create "${target_active_path}/${x}_${source_uuid}"
+    ${target_shell} [[ -d "${target_active_path}/${x}_${source_uuid}" ]] || ${target_shell} sudo btrfs subvolume create "${target_active_path}/${x}_${source_uuid}"
 
     # Snapshot active directory to serve as reference next time round
     source_backup="${source_backup_path}/${x}_${source_uuid}/${target_uuid}"
@@ -110,15 +118,15 @@ for x in * ; do
     # Send snapshot to target.
     destination_active="${target_active_path}/${x}_${source_uuid}/${target_uuid}"
     if sudo btrfs send ${parent_opt} ${latest_backup_path} "${source_backup}_new" | \
-            sudo btrfs receive "${target_active_path}/${x}_${source_uuid}" ; then
+            ${target_shell} sudo btrfs receive "${target_active_path}/${x}_${source_uuid}" ; then
         [[ -d "${source_backup}" ]] && sudo btrfs subvolume delete "${source_backup}"
         sudo mv "${source_backup}_new" "${source_backup}"
-        [[ -d "${destination_active}" ]] && sudo btrfs subvolume delete "${destination_active}"
-        sudo mv "${destination_active}_new" "${destination_active}"
+        ${target_shell} [[ -d "${destination_active}" ]] && ${target_shell} sudo btrfs subvolume delete "${destination_active}"
+        ${target_shell} sudo mv "${destination_active}_new" "${destination_active}"
         echo $x: backed up
     else
         sudo btrfs subvolume delete "${source_backup}" || true
-        sudo btrfs subvolume delete "${destination_active}_new" || true
+        ${target_shell} sudo btrfs subvolume delete "${destination_active}_new" || true
         echo $x: error sending snapshot, bailing
     fi
 done
