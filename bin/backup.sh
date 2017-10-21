@@ -112,14 +112,18 @@ for x in * ; do
         latest_backup_path="${source_backup}"
     fi
 
+    [[ -d "${source_backup}_new" ]] && sudo btrfs subvolume delete "${source_backup}_new"
+
     if ! sudo btrfs subvolume snapshot -r "$x" "${source_backup}_new" ; then
         sudo btrfs subvolume delete "${source_backup}_new" || true
         echo $x: error creating snapshot, bailing
         exit 1
     fi
 
-    # Send snapshot to target.
     destination_active="${target_active_path}/${x}_${source_uuid}/${target_uuid}"
+    ${target_shell} [[ -d "${destination_active}_new" ]] && ${target_shell} sudo btrfs subvolume delete "${destination_active}_new"
+
+    # Send snapshot to target.
     if sudo btrfs send ${parent_opt} ${latest_backup_path} "${source_backup}_new" | \
             ${target_shell} sudo btrfs receive "${target_active_path}/${x}_${source_uuid}" ; then
         [[ -d "${source_backup}" ]] && sudo btrfs subvolume delete "${source_backup}"
