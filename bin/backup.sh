@@ -88,23 +88,23 @@ target_uuid=$(${target_shell} sudo btrfs fi show "${target_root}" | grep uuid | 
 # Avoid conflicts with identical source names coming from other pools
 # when backing up
 source_uuid=$(sudo btrfs fi show "${source_root}" | grep uuid | awk '{print $2, $4}' | sed -e "s/'//g" -e "s/ /+/")"+${source_active_dir}"
-
+set -x
 cd "${source_active_path}"
 for x in * ; do
     [ -d "$x" ] || continue
 
     if [ -e "$x/.no_backup" ] ; then
-        echo $x: skipping due to .no_backup flag
+        echo -- $x: skipping due to .no_backup flag
         continue
     fi
 
-    echo $x: starting backup
+    echo -- $x: starting backup
 
-    [ -d "${source_backup_path}/${x}_${source_uuid}" ] || sudo btrfs subvolume create "${source_backup_path}/${x}_${source_uuid}"
-    ${target_shell} [ -d "${target_active_path}/${x}_${source_uuid}" ] || ${target_shell} sudo btrfs subvolume create "${target_active_path}/${x}_${source_uuid}"
+    #[ -d "${source_backup_path}/${x}_${source_uuid}" ] || sudo btrfs subvolume create "${source_backup_path}/${x}_${source_uuid}"
+    #${target_shell} [ -d "${target_active_path}/${x}_${source_uuid}" ] || ${target_shell} sudo btrfs subvolume create "${target_active_path}/${x}_${source_uuid}"
 
     # Snapshot active directory to serve as reference next time round
-    source_backup="${source_backup_path}/${x}_${source_uuid}/${target_uuid}"
+    source_backup="${source_backup_path}/${x}_${source_uuid}:${target_uuid}"
     parent_opt=""
     latest_backup_path=""
     if [ -d "${source_backup}" ] ; then
@@ -116,24 +116,25 @@ for x in * ; do
 
     if ! sudo btrfs subvolume snapshot -r "$x" "${source_backup}_new" ; then
         sudo btrfs subvolume delete "${source_backup}_new" || true
-        echo $x: error creating snapshot, bailing
+        echo -- $x: error creating snapshot, bailing
         exit 1
     fi
 
-    destination_active="${target_active_path}/${x}_${source_uuid}/${target_uuid}"
+    destination_active="${target_active_path}/${x}_${source_uuid}:${target_uuid}"
     ${target_shell} [ -d "${destination_active}_new" ] && ${target_shell} sudo btrfs subvolume delete "${destination_active}_new"
 
     # Send snapshot to target.
     if sudo btrfs send ${parent_opt} ${latest_backup_path} "${source_backup}_new" | \
-            ${target_shell} sudo btrfs receive "${target_active_path}/${x}_${source_uuid}" ; then
+            ${target_shell} sudo btrfs receive "${target_active_path}" ; then
         [ -d "${source_backup}" ] && sudo btrfs subvolume delete "${source_backup}"
         sudo mv "${source_backup}_new" "${source_backup}"
         ${target_shell} [ -d "${destination_active}" ] && ${target_shell} sudo btrfs subvolume delete "${destination_active}"
         ${target_shell} sudo mv "${destination_active}_new" "${destination_active}"
-        echo $x: backed up
+        echo -- $x: backed up
     else
         sudo btrfs subvolume delete "${source_backup}" || true
         ${target_shell} sudo btrfs subvolume delete "${destination_active}_new" || true
-        echo $x: error sending snapshot, bailing
+        echo -- $x: error sending snapshot, bailing
     fi
+    exit
 done
