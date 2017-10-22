@@ -62,8 +62,8 @@ while true ; do
     esac
 done
 
-[[ -z ${source_root} ]] && echo Need --source. && false
-[[ -z ${target_root} ]] && echo Need --target. && false
+[ -z ${source_root} ] && echo Need --source. && false
+[ -z ${target_root} ] && echo Need --target. && false
 
 ionice -c 3 -p $$
 renice -n 20 $$ > /dev/null 2>&1
@@ -76,8 +76,8 @@ source_backup_path="${source_root}/${source_backup_dir}"
 target_active_dir=__active
 target_active_path="${target_root}/${target_active_dir}"
 
-[[ -d "${source_backup_path}" ]] || sudo mkdir -p "${source_backup_path}"
-${target_shell} [[ -d "${target_active_path}" ]] || ${target_shell} sudo mkdir -p "${target_active_path}"
+[ -d "${source_backup_path}" ] || sudo mkdir -p "${source_backup_path}"
+${target_shell} [ -d "${target_active_path}" ] || ${target_shell} sudo mkdir -p "${target_active_path}"
 
 # Whether sending locally or over ssh, wherever the destination device
 # is plugged, we will recognise it and update the last backup if
@@ -91,28 +91,28 @@ source_uuid=$(sudo btrfs fi show "${source_root}" | grep uuid | awk '{print $2, 
 
 cd "${source_active_path}"
 for x in * ; do
-    [[ -d "$x" ]] || continue
+    [ -d "$x" ] || continue
 
-    if [[ -e "$x/.no_backup" ]] ; then
+    if [ -e "$x/.no_backup" ] ; then
         echo $x: skipping due to .no_backup flag
         continue
     fi
 
     echo $x: starting backup
 
-    [[ -d "${source_backup_path}/${x}_${source_uuid}" ]] || sudo btrfs subvolume create "${source_backup_path}/${x}_${source_uuid}"
-    ${target_shell} [[ -d "${target_active_path}/${x}_${source_uuid}" ]] || ${target_shell} sudo btrfs subvolume create "${target_active_path}/${x}_${source_uuid}"
+    [ -d "${source_backup_path}/${x}_${source_uuid}" ] || sudo btrfs subvolume create "${source_backup_path}/${x}_${source_uuid}"
+    ${target_shell} [ -d "${target_active_path}/${x}_${source_uuid}" ] || ${target_shell} sudo btrfs subvolume create "${target_active_path}/${x}_${source_uuid}"
 
     # Snapshot active directory to serve as reference next time round
     source_backup="${source_backup_path}/${x}_${source_uuid}/${target_uuid}"
     parent_opt=""
     latest_backup_path=""
-    if [[ -d "${source_backup}" ]] ; then
+    if [ -d "${source_backup}" ] ; then
         parent_opt="-p"
         latest_backup_path="${source_backup}"
     fi
 
-    [[ -d "${source_backup}_new" ]] && sudo btrfs subvolume delete "${source_backup}_new"
+    [ -d "${source_backup}_new" ] && sudo btrfs subvolume delete "${source_backup}_new"
 
     if ! sudo btrfs subvolume snapshot -r "$x" "${source_backup}_new" ; then
         sudo btrfs subvolume delete "${source_backup}_new" || true
@@ -121,14 +121,14 @@ for x in * ; do
     fi
 
     destination_active="${target_active_path}/${x}_${source_uuid}/${target_uuid}"
-    ${target_shell} [[ -d "${destination_active}_new" ]] && ${target_shell} sudo btrfs subvolume delete "${destination_active}_new"
+    ${target_shell} [ -d "${destination_active}_new" ] && ${target_shell} sudo btrfs subvolume delete "${destination_active}_new"
 
     # Send snapshot to target.
     if sudo btrfs send ${parent_opt} ${latest_backup_path} "${source_backup}_new" | \
             ${target_shell} sudo btrfs receive "${target_active_path}/${x}_${source_uuid}" ; then
-        [[ -d "${source_backup}" ]] && sudo btrfs subvolume delete "${source_backup}"
+        [ -d "${source_backup}" ] && sudo btrfs subvolume delete "${source_backup}"
         sudo mv "${source_backup}_new" "${source_backup}"
-        ${target_shell} [[ -d "${destination_active}" ]] && ${target_shell} sudo btrfs subvolume delete "${destination_active}"
+        ${target_shell} [ -d "${destination_active}" ] && ${target_shell} sudo btrfs subvolume delete "${destination_active}"
         ${target_shell} sudo mv "${destination_active}_new" "${destination_active}"
         echo $x: backed up
     else
