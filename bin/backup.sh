@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# TODO - Deal with filesystems that have spaces in the label
+# TODO - sha1 the UUIDs to keep length fixed and save metadata
+
 # e.g:
 # ./bin/backup.sh --source=/mnt/btrfs_pool_3_ssd --target=/mnt --target-shell "ssh -x eric@crucible.local"
 # ./bin/backup.sh --source=/mnt/btrfs_pool_2_main --target=/mnt --target-shell "ssh -x eric@crucible.local"
@@ -136,5 +139,4 @@ for x in * ; do
         ${target_shell} sudo btrfs subvolume delete "${destination_active}_new" || true
         echo -- $x: error sending snapshot, bailing
     fi
-    exit
 done
