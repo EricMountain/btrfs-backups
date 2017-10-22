@@ -88,7 +88,7 @@ target_uuid=$(${target_shell} sudo btrfs fi show "${target_root}" | grep uuid | 
 # Avoid conflicts with identical source names coming from other pools
 # when backing up
 source_uuid=$(sudo btrfs fi show "${source_root}" | grep uuid | awk '{print $2, $4}' | sed -e "s/'//g" -e "s/ /+/")"+${source_active_dir}"
-set -x
+
 cd "${source_active_path}"
 for x in * ; do
     [ -d "$x" ] || continue
