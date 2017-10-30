@@ -97,28 +97,6 @@ source_uuid=$(echo $source_uuid_label $source_uuid_devid $source_uuid_dir | sha1
 
 uuid=${source_uuid}_${target_uuid}
 
-cat - > "${uuid}.metadata" <<EOF
-source_uuid_label=$source_uuid_label
-source_uuid_devid=$source_uuid_devid
-source_uuid_dir=$source_uuid_dir
-source_uuid=$source_uuid
-target_uuid_label=$target_uuid_label
-target_uuid_devid=$target_uuid_devid
-target_uuid_dir=$target_uuid_dir
-target_uuid=$target_uuid
-EOF
-
-sudo chown root:root "${uuid}.metadata"
-sudo mv "${uuid}.metadata" "${source_backup_path}"
-
-if [ -n "${target_shell}" ] ; then
-    cat "${source_backup_path}/${uuid}.metadata" | ${target_shell} "cat - > ${uuid}.metadata"
-    ${target_shell} sudo chown root:root "${uuid}.metadata"
-    ${target_shell} sudo mv "${uuid}.metadata" "${target_active_path}"
-else
-    cat "${source_backup_path}/${uuid}.metadata" | ${target_shell} sudo /bin/bash -c "cat - > ${target_active_path}/${uuid}.metadata"
-fi
-
 cd "${source_active_path}"
 for x in * ; do
     [ -d "$x" ] || continue
@@ -127,6 +105,21 @@ for x in * ; do
         echo -- $x: skipping due to .no_backup flag
         continue
     fi
+
+    echo -- $x: saving metadata
+    sudo /bin/bash -c  "cat - > ${x}/.${uuid}.btrfs-backups.metadata" <<EOF
+source_hostname=$(hostname)
+source_volume_name=${x}
+source_uuid_label=$source_uuid_label
+source_uuid_devid=$source_uuid_devid
+source_uuid_dir=$source_uuid_dir
+source_uuid=$source_uuid
+
+target_uuid_label=$target_uuid_label
+target_uuid_devid=$target_uuid_devid
+target_uuid_dir=$target_uuid_dir
+target_uuid=$target_uuid
+EOF
 
     echo -- $x: starting backup
 
