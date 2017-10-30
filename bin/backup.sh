@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# TODO - Deal with filesystems that have spaces in the label
-# TODO - sha1 the UUIDs to keep length fixed and save metadata
-
 # e.g:
 # ./bin/backup.sh --source=/mnt/btrfs_pool_3_ssd --target=/mnt --target-shell "ssh -x eric@crucible.local"
 # ./bin/backup.sh --source=/mnt/btrfs_pool_2_main --target=/mnt --target-shell "ssh -x eric@crucible.local"
@@ -86,11 +83,41 @@ ${target_shell} [ -d "${target_active_path}" ] || ${target_shell} sudo mkdir -p 
 # is plugged, we will recognise it and update the last backup if
 # present, or send a full stream. Including the active directory in the
 # ID allows for multiple such directories on the destination.
-target_uuid=$(${target_shell} sudo btrfs fi show "${target_root}" | grep uuid | awk '{print $2, $4}' | sed -e "s/'//g" -e "s/ /+/")+"${target_active_dir}"
+target_uuid_label=$(${target_shell} sudo btrfs fi show "${target_root}" | grep uuid | sed -e "s/^.*'\(.*\)'.*\$/\1/")
+target_uuid_devid=$(${target_shell} sudo btrfs fi show "${target_root}" | grep uuid | sed -E -e "s/^.*uuid: ([^ ]+).*\$/\1/")
+target_uuid_dir="${target_active_dir}"
+target_uuid=$(echo $target_uuid_label $target_uuid_devid $target_uuid_dir | sha1sum | awk '{print $1}')
 
 # Avoid conflicts with identical source names coming from other pools
 # when backing up
-source_uuid=$(sudo btrfs fi show "${source_root}" | grep uuid | awk '{print $2, $4}' | sed -e "s/'//g" -e "s/ /+/")"+${source_active_dir}"
+source_uuid_label=$(sudo btrfs fi show "${source_root}" | grep uuid | sed -e "s/^.*'\(.*\)'.*\$/\1/")
+source_uuid_devid=$(sudo btrfs fi show "${source_root}" | grep uuid | sed -E -e "s/^.*uuid: ([^ ]+).*\$/\1/")
+source_uuid_dir="${source_active_dir}"
+source_uuid=$(echo $source_uuid_label $source_uuid_devid $source_uuid_dir | sha1sum | awk '{print $1}')
+
+uuid=${source_uuid}_${target_uuid}
+
+cat - > "${uuid}.metadata" <<EOF
+source_uuid_label=$source_uuid_label
+source_uuid_devid=$source_uuid_devid
+source_uuid_dir=$source_uuid_dir
+source_uuid=$source_uuid
+target_uuid_label=$target_uuid_label
+target_uuid_devid=$target_uuid_devid
+target_uuid_dir=$target_uuid_dir
+target_uuid=$target_uuid
+EOF
+
+sudo chown root:root "${uuid}.metadata"
+sudo mv "${uuid}.metadata" "${source_backup_path}"
+
+if [ -n "${target_shell}" ] ; then
+    cat "${source_backup_path}/${uuid}.metadata" | ${target_shell} "cat - > ${uuid}.metadata"
+    ${target_shell} sudo chown root:root "${uuid}.metadata"
+    ${target_shell} sudo mv "${uuid}.metadata" "${target_active_path}"
+else
+    cat "${source_backup_path}/${uuid}.metadata" | ${target_shell} sudo /bin/bash -c "cat - > ${target_active_path}/${uuid}.metadata"
+fi
 
 cd "${source_active_path}"
 for x in * ; do
@@ -103,11 +130,8 @@ for x in * ; do
 
     echo -- $x: starting backup
 
-    #[ -d "${source_backup_path}/${x}_${source_uuid}" ] || sudo btrfs subvolume create "${source_backup_path}/${x}_${source_uuid}"
-    #${target_shell} [ -d "${target_active_path}/${x}_${source_uuid}" ] || ${target_shell} sudo btrfs subvolume create "${target_active_path}/${x}_${source_uuid}"
-
     # Snapshot active directory to serve as reference next time round
-    source_backup="${source_backup_path}/${x}_${source_uuid}:${target_uuid}"
+    source_backup="${source_backup_path}/${x}_${uuid}"
     parent_opt=""
     latest_backup_path=""
     if [ -d "${source_backup}" ] ; then
@@ -123,7 +147,7 @@ for x in * ; do
         exit 1
     fi
 
-    destination_active="${target_active_path}/${x}_${source_uuid}:${target_uuid}"
+    destination_active="${target_active_path}/${x}_${uuid}"
     ${target_shell} [ -d "${destination_active}_new" ] && ${target_shell} sudo btrfs subvolume delete "${destination_active}_new"
 
     # Send snapshot to target.
