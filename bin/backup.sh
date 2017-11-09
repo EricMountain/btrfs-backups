@@ -98,8 +98,16 @@ source_uuid=$(echo $source_uuid_label $source_uuid_devid $source_uuid_dir | sha1
 uuid=${source_uuid}_${target_uuid}
 
 cd "${source_active_path}"
-for x in * ; do
+[ -d "${source_active_path}/__metadata" ] || sudo btrfs subvolume create "${source_active_path}/__metadata"
+let doMetadata=0 || true
+for x in * __metadata ; do
     [ -d "$x" ] || continue
+
+    # Ensure __metadata is backed up last
+    if [ $doMetadata -eq 0 -a "${x}" == "__metadata" ]  ; then
+        let doMetadata=1
+        continue
+    fi
 
     if [ -e "$x/.no_backup" ] ; then
         echo -- $x: skipping due to .no_backup flag
@@ -107,8 +115,9 @@ for x in * ; do
     fi
 
     echo -- $x: saving metadata
-    sudo /bin/bash -c  "cat - > ${x}/.${uuid}.btrfs-backups.metadata" <<EOF
+    sudo /bin/bash -c  "cat - > __metadata/${x}_${uuid}.btrfs-backups.metadata" <<EOF
 source_hostname=$(hostname)
+source_mountpath=${source_active_path}
 source_volume_name=${x}
 source_uuid_label=$source_uuid_label
 source_uuid_devid=$source_uuid_devid
