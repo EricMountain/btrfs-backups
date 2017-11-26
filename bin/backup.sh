@@ -150,7 +150,8 @@ EOF
     fi
 
     destination_active="${target_active_path}/${x}_${uuid}"
-    ${target_shell} [ -d "${destination_active}_new" ] && ${target_shell} sudo btrfs subvolume delete "${destination_active}_new"
+    destination_active_new="${target_active_path}/.${x}_${uuid}_new"
+    ${target_shell} [ -d "${destination_active_new}" ] && ${target_shell} sudo btrfs subvolume delete "${destination_active_new}"
 
     # Send snapshot to target.
     if sudo btrfs send ${parent_opt} ${latest_backup_path} "${source_backup}_new" | \
@@ -158,11 +159,11 @@ EOF
         [ -d "${source_backup}" ] && sudo btrfs subvolume delete "${source_backup}"
         sudo mv "${source_backup}_new" "${source_backup}"
         ${target_shell} [ -d "${destination_active}" ] && ${target_shell} sudo btrfs subvolume delete "${destination_active}"
-        ${target_shell} sudo mv "${destination_active}_new" "${destination_active}"
+        ${target_shell} sudo mv "${destination_active_new}" "${destination_active}"
         echo -- $x: backed up
     else
         sudo btrfs subvolume delete "${source_backup}" || true
-        ${target_shell} sudo btrfs subvolume delete "${destination_active}_new" || true
+        ${target_shell} sudo btrfs subvolume delete "${destination_active_new}" || true
         echo -- $x: error sending snapshot, bailing
     fi
 done
