@@ -134,6 +134,7 @@ EOF
 
     # Snapshot active directory to serve as reference next time round
     source_backup="${source_backup_path}/${x}_${uuid}"
+    source_backup_new="${source_backup_path}/.${x}_${uuid}_new"
     parent_opt=""
     latest_backup_path=""
     if [ -d "${source_backup}" ] ; then
@@ -141,10 +142,10 @@ EOF
         latest_backup_path="${source_backup}"
     fi
 
-    [ -d "${source_backup}_new" ] && sudo btrfs subvolume delete "${source_backup}_new"
+    [ -d "${source_backup_new}" ] && sudo btrfs subvolume delete "${source_backup_new}"
 
-    if ! sudo btrfs subvolume snapshot -r "$x" "${source_backup}_new" ; then
-        sudo btrfs subvolume delete "${source_backup}_new" || true
+    if ! sudo btrfs subvolume snapshot -r "$x" "${source_backup_new}" ; then
+        sudo btrfs subvolume delete "${source_backup_new}" || true
         echo -- $x: error creating snapshot, bailing
         exit 1
     fi
@@ -154,16 +155,20 @@ EOF
     ${target_shell} [ -d "${destination_active_new}" ] && ${target_shell} sudo btrfs subvolume delete "${destination_active_new}"
 
     # Send snapshot to target.
-    if sudo btrfs send ${parent_opt} ${latest_backup_path} "${source_backup}_new" | \
+    if sudo btrfs send ${parent_opt} ${latest_backup_path} "${source_backup_new}" | \
             ${target_shell} sudo btrfs receive "${target_active_path}" ; then
+
         [ -d "${source_backup}" ] && sudo btrfs subvolume delete "${source_backup}"
-        sudo mv "${source_backup}_new" "${source_backup}"
+        sudo mv "${source_backup_new}" "${source_backup}"
+
         ${target_shell} [ -d "${destination_active}" ] && ${target_shell} sudo btrfs subvolume delete "${destination_active}"
         ${target_shell} sudo mv "${destination_active_new}" "${destination_active}"
+
         echo -- $x: backed up
     else
-        sudo btrfs subvolume delete "${source_backup}_new" || true
+        sudo btrfs subvolume delete "${source_backup_new}" || true
         ${target_shell} sudo btrfs subvolume delete "${destination_active_new}" || true
+
         echo -- $x: error sending snapshot, bailing
     fi
 done
