@@ -162,7 +162,7 @@ EOF
         ${target_shell} sudo mv "${destination_active_new}" "${destination_active}"
         echo -- $x: backed up
     else
-        sudo btrfs subvolume delete "${source_backup}" || true
+        sudo btrfs subvolume delete "${source_backup}_new" || true
         ${target_shell} sudo btrfs subvolume delete "${destination_active_new}" || true
         echo -- $x: error sending snapshot, bailing
     fi
