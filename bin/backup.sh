@@ -116,7 +116,7 @@ for x in * __metadata ; do
 
     echo -- $x: saving metadata
     sudo /bin/bash -c  "cat - > __metadata/${x}_${uuid}.btrfs-backups.metadata" <<EOF
-# Backup of ${x} to device ${uuid}
+# Backup of ${x} for device pair ${uuid}
 timestamp=$(date -u "+%Y-%m-%d_%H:%M:%S_%Z")
 
 source_hostname=$(hostname)
