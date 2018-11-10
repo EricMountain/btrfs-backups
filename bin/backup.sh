@@ -135,8 +135,9 @@ for x in * __metadata ; do
     # Ensure __metadata is backed up last
     if [ ${status[doMetadata]} -eq 0 -a "${x}" == "__metadata" ]  ; then
         status[doMetadata]=1
-        writeMetadata $x config
         continue
+    elif [ "${x}" == "__metadata" ] ; then
+        writeMetadata $x config
     fi
 
     if [ -e "$x/.no_backup" ] ; then
