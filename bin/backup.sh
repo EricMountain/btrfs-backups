@@ -125,7 +125,7 @@ config[uuid]=${config[source_uuid]}_${config[target_uuid]}
 cd "${config[source_active_path]}"
 [ -d "${config[source_active_path]}/__metadata" ] || sudo btrfs subvolume create "${config[source_active_path]}/__metadata"
 
-declare -A status=( [doMetadata]=0 [errorsOccurred]=0 )
+declare -A status=([doMetadata]=0 [errorsOccurred]=0)
 declare -A bkp
 for x in * __metadata ; do
     bkp=([hasError]=0)
