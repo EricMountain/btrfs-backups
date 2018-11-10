@@ -102,6 +102,7 @@ uuid=${source_uuid}_${target_uuid}
 cd "${source_active_path}"
 [ -d "${source_active_path}/__metadata" ] || sudo btrfs subvolume create "${source_active_path}/__metadata"
 let doMetadata=0 || true
+let errorsOccurred=0 || true
 for x in * __metadata ; do
     [ -d "$x" ] || continue
 
@@ -151,8 +152,8 @@ EOF
 
     if ! sudo btrfs subvolume snapshot -r "$x" "${source_backup_new}" ; then
         sudo btrfs subvolume delete "${source_backup_new}" || true
-        echo -- $x: error creating snapshot, bailing
-        exit 1
+        echo -- $x: error creating snapshot
+        let errorsOccurred=1
     fi
 
     destination_active="${target_active_path}/${x}_${uuid}"
@@ -174,6 +175,9 @@ EOF
         sudo btrfs subvolume delete "${source_backup_new}" || true
         ${target_shell} sudo btrfs subvolume delete "${destination_active_new}" || true
 
-        echo -- $x: error sending snapshot, bailing
+        echo -- $x: error sending snapshot
+        let errorsOccurred=1
     fi
 done
+
+exit $errorsOccurred
