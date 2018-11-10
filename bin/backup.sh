@@ -164,11 +164,19 @@ for x in * __metadata ; do
         echo -- $x: error creating snapshot "${bkp[source_backup_new]}"
         status[errorsOccurred]=1
         bkp[hasError]=1
+        continue
     fi
 
     bkp[destination_active]="${config[target_active_path]}/${x}_${config[uuid]}"
     bkp[destination_active_new]="${config[target_active_path]}/.${x}_${config[uuid]}_new"
-    ${config[target_shell]} [ -d "${bkp[destination_active_new]}" ] && ${config[target_shell]} sudo btrfs subvolume delete "${bkp[destination_active_new]}"
+    if ${config[target_shell]} [ -d "${bkp[destination_active_new]}" ] ; then
+        if ! ${config[target_shell]} sudo btrfs subvolume delete "${bkp[destination_active_new]}" ; then
+            echo -- $x: error deleting stale backup "${bkp[destination_active_new]}" on target
+            status[errorsOccurred]=1
+            bkp[hasError]=1
+            continue
+        fi
+    fi
 
     # Send snapshot to target.
     if sudo btrfs send ${bkp[parent_opt]} ${bkp[latest_backup_path]} "${bkp[source_backup_new]}" | \
@@ -188,6 +196,7 @@ for x in * __metadata ; do
         echo -- $x: error sending snapshot
         status[errorsOccurred]=1
         bkp[hasError]=1
+        continue
     fi
 
     # Only update metadata after a successful backup, except when backing up 
