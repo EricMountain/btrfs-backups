@@ -8,15 +8,11 @@
 
 # for x in __metadata* ; do echo -------- $x ; grep -hE 'hostname|volume_name|timestamp' $x/* | sed -e 's/^\(timestamp=....-..-..\).*$/\1/' | sort -u ; done
 
-set -xeuo pipefail
+set -x
 
-catch() {
-    errormsg="${1:-}"
-    trap '' ERR
-    echo $errormsg
-}
+dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
-trap 'catch "Error caught (line $LINENO, exit code $?)"' ERR
+. ${dir}/common.sh
 
 usage() {
     cat - <<EOF
