@@ -173,7 +173,7 @@ for x in * __metadata ; do
     fi
 
     for d in $(${config[target_shell]} ls -dr1 "${bkp[destination_active_basename]}"* 2> /dev/null) ; do
-        bkp[destination_active_last_UUID]=$(btrfs subvol show "${d}" | grep "Received UUID" | awk '{print $3}')
+        bkp[destination_active_last_UUID]=$(${config[target_shell]} sudo btrfs subvol show "${d}" | grep "Received UUID" | awk '{print $3}')
         if [ -n "${bkp[destination_active_last_UUID]}" ] ; then
             break
         fi
