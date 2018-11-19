@@ -172,6 +172,7 @@ for x in * __metadata ; do
         fi
     fi
 
+    echo -- ${x}: Check for an existing backup on the target
     for d in $(${config[target_shell]} ls -dr1 "${bkp[destination_active_basename]}"* 2> /dev/null) ; do
         bkp[destination_active_last_UUID]=$(${config[target_shell]} sudo btrfs subvol show "${d}" | grep "Received UUID" | awk '{print $3}')
         if [ -n "${bkp[destination_active_last_UUID]}" ] ; then
@@ -182,7 +183,8 @@ for x in * __metadata ; do
     # Prior snapshot needs to have UUID == bkp[destination_active_last_UUID]
     echo -- ${x}: Check for prior snapshot that can serve as a reference
     if [ -n "${bkp[destination_active_last_UUID]}" ] ; then
-        tmp=$(btrfs subvol list -u -r ${config[source_backup_path]} | grep "${bkp[destination_active_last_UUID]}" | cut -d / -f 2)
+        echo -- ${x}: Existing backup reference: ${bkp[destination_active_last_UUID]}
+        tmp=$(sudo btrfs subvol list -u -r ${config[source_backup_path]} | grep "${bkp[destination_active_last_UUID]}" | cut -d / -f 2)
         if [ -n "${tmp}" ] ; then
             bkp[latest_backup_path]="${config[source_backup_path]}/${tmp}"
             bkp[parent_opt]="-p"
