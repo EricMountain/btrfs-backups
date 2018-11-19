@@ -6,9 +6,7 @@
 # ./bin/backup.sh --source=/mnt/btrfs_pool_3_ssd --target=/mnt/btrfs_pool_1
 # ./bin/backup.sh --source=/mnt/btrfs_pool_2_main --target=/mnt/btrfs_pool_1
 
-# for x in __metadata* ; do echo -------- $x ; grep -hE 'hostname|volume_name|timestamp' $x/* | sed -e 's/^\(timestamp=....-..-..\).*$/\1/' | sort -u ; done
-
-set -x
+#set -x
 
 dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
@@ -28,7 +26,7 @@ EOF
 writeMetadata() {
     local x=$1
     local -n configRef=$2
-    echo -- $x: saving metadata
+    echo -- ${x}: Saving metadata
     sudo /bin/bash -c  "cat - > __metadata/${x}_${configRef[uuid]}.btrfs-backups.metadata" <<EOF
 # Backup of ${x} for device pair ${configRef[uuid]}
 timestamp=$(date -u "+%Y-%m-%d_%H:%M:%S_%Z")
@@ -125,26 +123,25 @@ cd "${config[source_active_path]}"
 
 declare -A status=([doMetadata]=0 [errorsOccurred]=0)
 declare -A bkp
-# FIXME add * back below
-for x in test __metadata ; do
+for x in * __metadata ; do
     bkp=([hasError]=0)
 
-    [ -d "$x" ] || continue
+    [ -d "${x}" ] || continue
 
     # Ensure __metadata is backed up last
     if [ ${status[doMetadata]} -eq 0 -a "${x}" == "__metadata" ]  ; then
         status[doMetadata]=1
         continue
     elif [ "${x}" == "__metadata" ] ; then
-        writeMetadata $x config
+        writeMetadata ${x} config
     fi
 
-    if [ -e "$x/.no_backup" ] ; then
-        echo -- $x: skipping due to .no_backup flag
+    if [ -e "${x}/.no_backup" ] ; then
+        echo -- ${x}: Skipping due to .no_backup flag
         continue
     fi
 
-    echo -- $x: starting backup
+    echo -- ${x}: Starting backup
 
     bkp[source_backup_basename]="${config[source_backup_path]}/${x}_${config[uuid]}"
     bkp[source_backup]="${config[source_backup_path]}/${x}_${config[uuid]}_${config[timestamp]}"
@@ -153,63 +150,69 @@ for x in test __metadata ; do
     bkp[parent_opt]=""
     bkp[latest_backup_path]=""
 
-    bkp[destination_active]="${config[target_active_path]}/${x}_${config[uuid]}"
+    bkp[destination_active]="${config[target_active_path]}/${x}_${config[uuid]}_${config[timestamp]}"
+    bkp[destination_active_basename]="${config[target_active_path]}/${x}_${config[uuid]}"
     bkp[destination_active_new]="${config[target_active_path]}/.${x}_${config[uuid]}_${config[timestamp]}"
     bkp[destination_active_new_basename]="${config[target_active_path]}/.${x}_${config[uuid]}_"
     bkp[destination_active_last_UUID]=""
 
-    # Delete stale backups on destination
-    for d in $(${config[target_shell]} ls "${bkp[destination_active_new_basename]}*") ; then
+    echo -- ${x}: Delete stale backups on destination
+    for d in $(${config[target_shell]} ls -1d "${bkp[destination_active_new_basename]}"* 2> /dev/null) ; do
         if ! ${config[target_shell]} sudo btrfs subvolume delete "${d}" ; then
-            echo -- $x: Warning, unable to delete stale backup "${d}" on target, continuing
+            echo -- ${x}: Warning, unable to delete stale backup "${d}" on target, continuing
+        else
+            echo -- ${x}: Deleted stale backup "${d}" on target
+        fi
+    done
+
+    echo -- ${x}: Clean out any orphan snapshots
+    if [ -n "$(ls -1d ${config[source_backup_path]}/.${x}_${config[uuid]}* 2> /dev/null)" ] ; then 
+        if ! sudo btrfs subvolume delete "${config[source_backup_path]}/.${x}_${config[uuid]}"* ; then
+            echo -- ${x}: Error, unable to delete orphan snapshots "${config[source_backup_path]}/.${x}_${config[uuid]}*", continuing
         fi
     fi
 
-    # Clean out any orphan snapshots
-    [ -n "$(ls ${config[source_backup_path]}/.${x}_${config[uuid]}*)" ] && sudo btrfs subvolume delete "${config[source_backup_path]}/.${x}_${config[uuid]}*"
+    for d in $(${config[target_shell]} ls -dr1 "${bkp[destination_active_basename]}"* 2> /dev/null) ; do
+        bkp[destination_active_last_UUID]=$(btrfs subvol show "${d}" | grep "Received UUID" | awk '{print $3}')
+        if [ -n "${bkp[destination_active_last_UUID]}" ] ; then
+            break
+        fi
+    done
 
-    # Get last received UUID on target
-    if ${config[target_shell]} [ -d "${bkp[destination_active]}" ] ; then 
-        bkp[destination_active_last_UUID]=$(btrfs subvol show "${bkp[destination_active]}" | grep "Received UUID" | awk '{print $3}')
-    fi
-
-    # Check for prior snapshot that can serve as a reference - needs to have UUID == bkp[destination_active_last_UUID]
+    # Prior snapshot needs to have UUID == bkp[destination_active_last_UUID]
+    echo -- ${x}: Check for prior snapshot that can serve as a reference
     if [ -n "${bkp[destination_active_last_UUID]}" ] ; then
-        tmp=$(btrfs subvol list -u -r ${config[source_backup_path]} | grep "${bkp[destination_active_last_UUID]} | cut -d / -f 2")
+        tmp=$(btrfs subvol list -u -r ${config[source_backup_path]} | grep "${bkp[destination_active_last_UUID]}" | cut -d / -f 2)
         if [ -n "${tmp}" ] ; then
             bkp[latest_backup_path]="${config[source_backup_path]}/${tmp}"
             bkp[parent_opt]="-p"
+            echo -- ${x}: Parent backup found: ${bkp[latest_backup_path]}
         fi
     fi
-exit 1
-    # Snapshot active directory to serve as reference next time round
-    if ! sudo btrfs subvolume snapshot -r "$x" "${bkp[source_backup_new]}" ; then
+
+    echo -- ${x}: Snapshot active directory
+    if ! sudo btrfs subvolume snapshot -r "${x}" "${bkp[source_backup_new]}" ; then
         sudo btrfs subvolume delete "${bkp[source_backup_new]}" || true
-        echo -- $x: error creating snapshot "${bkp[source_backup_new]}"
+        echo -- ${x}: Warning: failed to create snapshot "${bkp[source_backup_new]}"
         status[errorsOccurred]=1
         bkp[hasError]=1
         continue
     fi
 
-    # Send snapshot to target.
+    echo -- ${x}: Send snapshot to target
     if sudo btrfs send ${bkp[parent_opt]} ${bkp[latest_backup_path]} "${bkp[source_backup_new]}" | \
             ${config[target_shell]} sudo btrfs receive "${config[target_active_path]}" ; then
 
-        # [ -d "${bkp[source_backup]}" ] && sudo btrfs subvolume delete "${bkp[source_backup]}"
-        [ -d "${bkp[source_backup]}" ] && sudo mv "${bkp[source_backup]}" "${bkp[source_backup]}.txn"
         sudo mv "${bkp[source_backup_new]}" "${bkp[source_backup]}"
 
-        #${config[target_shell]} sudo /bin/bash -c "[ -d ${bkp[destination_active]} ] && btrfs subvolume delete ${bkp[destination_active]} ; mv ${bkp[destination_active_new]} ${bkp[destination_active]}"
-        ${config[target_shell]} sudo /bin/bash -c "[ -d ${bkp[destination_active]} ] && btrfs subvolume delete ${bkp[destination_active]} ; mv ${bkp[destination_active_new]} ${bkp[destination_active]}"
+        ${config[target_shell]} sudo mv ${bkp[destination_active_new]} ${bkp[destination_active]}
 
-        [ -d "${bkp[source_backup]}" ] && sudo btrfs subvolume delete "${bkp[source_backup]}.txn"
-
-        echo -- $x: backed up
+        echo -- ${x}: Backed up
     else
         sudo btrfs subvolume delete "${bkp[source_backup_new]}" || true
         ${config[target_shell]} sudo btrfs subvolume delete "${bkp[destination_active_new]}" || true
 
-        echo -- $x: error sending snapshot
+        echo -- ${x}: error sending snapshot
         status[errorsOccurred]=1
         bkp[hasError]=1
         continue
@@ -217,13 +220,10 @@ exit 1
 
     # Only update metadata after a successful backup, except when backing up 
     # metadata itself (in which case, the metadata needs to be updated before
-    # backing up else the backup target will hold stale data)
+    # backing up else the backup target will hold stale data). Hmpf.
     if [ "${x}" != "__metadata" -a ${bkp[hasError]} -eq 0 ] ; then
-        writeMetadata $x config
+        writeMetadata ${x} config
     fi
-
-    echo stopping now
-    break
 done    
 
 exit ${status[errorsOccurred]}
