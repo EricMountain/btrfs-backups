@@ -53,16 +53,22 @@ config[target_active_path]="${config[target_root]}/${config[target_active_dir]}"
 
 cd ${config[target_active_path]}
 
-for bkp_pool in $(ls -rd1 __metadata*) ; do
-    echo -------- ${bkp_pool}
-    for bkp_meta in ${bkp_pool}/* ; do
-        declare -A metadata
-        while IFS== read key value ; do
-            #echo DEBUG: $key --  $value
-            if [ -z "${key}" -o -z "${value}" ] ; then continue ; fi
-            metadata[${key}]=$value
-        done < ${bkp_meta}
+current=
+for bkp_pool in $(ls -rd1 __metadata*-*) ; do
+    # Chop off the date for grouping same-source/target entries
+    tmp=${bkp_pool:0:(-16)}
+    if [ -z "${current}" -o "${current}" != "${tmp}" ] ; then
+        current="${tmp}"
+        for bkp_meta in ${bkp_pool}/* ; do
+            declare -A metadata
+            while IFS== read key value ; do
+                #echo DEBUG: $key --  $value
+                if [ -z "${key}" -o -z "${value}" ] ; then continue ; fi
+                metadata[${key}]=$value
+            done < ${bkp_meta}
 
-        echo ${metadata[timestamp]} ${metadata[source_hostname]}/${metadata[source_volume_name]} "-->" ${metadata[target_uuid_label]}
-    done
-done
+            echo ${metadata[timestamp]} ${metadata[source_uuid]} "-->" ${metadata[target_uuid]} \
+                 / ${metadata[source_hostname]}/${metadata[source_volume_name]} "-->" ${metadata[target_uuid_label]}
+        done
+    fi
+done | sort
