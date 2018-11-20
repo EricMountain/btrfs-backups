@@ -5,8 +5,8 @@
 Assumes you have at least 2 btrfs pools:
 
 * one with your active filesystems (those you want backed up)
-* one where you will back up to (currently has to be locally attached,
-  ssh coming soon)
+* one where you will back up to (may be locally attached, or
+  accesible via ssh)
 
 The pool containing your active filesystems is expected to be laid out
 as follows:
@@ -23,24 +23,24 @@ as follows:
  |    +--- snapshots of volumes in __active
  |
  +--- __backups
+ |    |
+ |    +--- snapshots that have been btrfs-sent to backup devices
+ |
+ +--- __metadata
       |
-      +--- snapshots that have been btrfs-sent to backup devices
+      +--- information about the backups parseable by report.sh
 ```
+
+!! The snapshots functionality is not currently used and is unmaintained at the
+!! moment.
 
 Snapshots of volumes in `__active` are created in the same pool under
 `__snapshots` as `name/timestamp`.
 
-Backups are performed by creating a snapshots under `__backups` from volumes in
+Backups are performed by creating snapshots under `__backups` from volumes in
 __active and `btrfs-send`ing these snapshots to
 another pool.  The previous matching snapshot in __backups for the
 target device and name is used as parent for the `btrfs send` operation.
-The parent is discarded if the backup operation succeeds.
-
-## To do
-
-* Backup over ssh
-* systemd units
-* Snapshot expiry policies
 
 ## Hacks
 
