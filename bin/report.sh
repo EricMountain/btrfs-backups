@@ -53,9 +53,7 @@ config[target_active_path]="${config[target_root]}/${config[target_active_dir]}"
 
 cd ${config[target_active_path]}
 
-#for x in __metadata* ; do echo -------- $x ; for y in $x/* ; do grep -hE 'label|hostname|volume_name|timestamp' $y | sed -e 's/^\(timestamp=....-..-..\).*$/\1/' ; done ; done
-#set -x
-for bkp_pool in __metadata* ; do
+for bkp_pool in $(ls -rd1 __metadata*) ; do
     echo -------- ${bkp_pool}
     for bkp_meta in ${bkp_pool}/* ; do
         declare -A metadata

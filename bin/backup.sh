@@ -9,7 +9,6 @@
 #set -x
 
 dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-
 . ${dir}/common.sh
 
 usage() {
@@ -86,6 +85,8 @@ done
 
 ionice -c 3 -p $$
 renice -n 20 $$ > /dev/null 2>&1
+
+echo -- Init: configuring
 
 config[timestamp]=$(date -u +%Y%m%d-%H%M%S)
 
@@ -189,6 +190,8 @@ for x in * __metadata ; do
             bkp[latest_backup_path]="${config[source_backup_path]}/${tmp}"
             bkp[parent_opt]="-p"
             echo -- ${x}: Parent backup found: ${bkp[latest_backup_path]}
+        else
+            echo -- ${x}: No parent backup found
         fi
     fi
 
