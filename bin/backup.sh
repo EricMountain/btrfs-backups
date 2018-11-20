@@ -185,7 +185,7 @@ for x in * __metadata ; do
     echo -- ${x}: Check for prior snapshot that can serve as a reference
     if [ -n "${bkp[destination_active_last_UUID]}" ] ; then
         echo -- ${x}: Existing backup reference: ${bkp[destination_active_last_UUID]}
-        tmp=$(sudo btrfs subvol list -u -r ${config[source_backup_path]} | grep "${bkp[destination_active_last_UUID]}" | cut -d / -f 2)
+        tmp=$(sudo btrfs subvol list -u -r ${config[source_backup_path]} | grep "${bkp[destination_active_last_UUID]}" | cut -d / -f 2) || true
         if [ -n "${tmp}" ] ; then
             bkp[latest_backup_path]="${config[source_backup_path]}/${tmp}"
             bkp[parent_opt]="-p"
