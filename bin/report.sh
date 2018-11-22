@@ -68,7 +68,7 @@ for bkp_pool in $(ls -rd1 __metadata*-*) ; do
             done < ${bkp_meta}
 
             echo ${metadata[timestamp]} ${metadata[source_uuid]} "-->" ${metadata[target_uuid]} \
-                 / ${metadata[source_hostname]}/${metadata[source_volume_name]} "-->" ${metadata[target_uuid_label]}
+                 = ${metadata[target_uuid_label]} "<--" ${metadata[source_hostname]}/${metadata[source_volume_name]}
         done
     fi
 done | sort
