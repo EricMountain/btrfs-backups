@@ -169,7 +169,7 @@ for x in * __metadata ; do
     echo -- ${x}: Clean out any orphan snapshots
     if [ -n "$(ls -1d ${config[source_backup_path]}/.${x}_${config[uuid]}* 2> /dev/null)" ] ; then 
         if ! sudo btrfs subvolume delete "${config[source_backup_path]}/.${x}_${config[uuid]}"* ; then
-            echo -- ${x}: Error, unable to delete orphan snapshots "${config[source_backup_path]}/.${x}_${config[uuid]}*", continuing
+            echo -- ${x}: Error, unable to delete orphan snapshots, continuing
         fi
     fi
 
