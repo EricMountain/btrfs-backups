@@ -147,7 +147,7 @@ for x in * __metadata ; do
     bkp[source_backup_basename]="${config[source_backup_path]}/${x}_${config[uuid]}"
     bkp[source_backup]="${config[source_backup_path]}/${x}_${config[uuid]}_${config[timestamp]}"
     bkp[source_backup_new]="${config[source_backup_path]}/.${x}_${config[uuid]}_${config[timestamp]}"
-    
+
     bkp[parent_opt]=""
     bkp[latest_backup_path]=""
 
@@ -167,13 +167,14 @@ for x in * __metadata ; do
     done
 
     echo -- ${x}: Clean out any orphan snapshots
-    if [ -n "$(ls -1d ${config[source_backup_path]}/.${x}_${config[uuid]}* 2> /dev/null)" ] ; then 
+    if [ -n "$(ls -1d ${config[source_backup_path]}/.${x}_${config[uuid]}* 2> /dev/null)" ] ; then
         if ! sudo btrfs subvolume delete "${config[source_backup_path]}/.${x}_${config[uuid]}"* ; then
             echo -- ${x}: Error, unable to delete orphan snapshots, continuing
         fi
     fi
 
     echo -- ${x}: Check for an existing backup on the target
+    # List backups from most recent to oldest to always pick most recent
     for d in $(${config[target_shell]} ls -dr1 "${bkp[destination_active_basename]}"* 2> /dev/null) ; do
         bkp[destination_active_last_UUID]=$(${config[target_shell]} sudo btrfs subvol show "${d}" | grep "Received UUID" | awk '{print $3}')
         if [ -n "${bkp[destination_active_last_UUID]}" ] ; then
@@ -223,12 +224,12 @@ for x in * __metadata ; do
         continue
     fi
 
-    # Only update metadata after a successful backup, except when backing up 
+    # Only update metadata after a successful backup, except when backing up
     # metadata itself (in which case, the metadata needs to be updated before
     # backing up else the backup target will hold stale data). Hmpf.
     if [ "${x}" != "__metadata" -a ${bkp[hasError]} -eq 0 ] ; then
         writeMetadata ${x} config
     fi
-done    
+done
 
 exit ${status[errorsOccurred]}
