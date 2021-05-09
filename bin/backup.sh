@@ -214,6 +214,9 @@ for x in * __metadata ; do
         ${config[target_shell]} sudo mv ${bkp[destination_active_new]} ${bkp[destination_active]}
 
         echo -- ${x}: Backed up
+
+        ${config[target_shell]} sudo ln -sf ${bkp[destination_active]} ${bkp[destination_active_basename]}_latest
+        echo -- ${x}: Created symlink to latest backup
     else
         sudo btrfs subvolume delete "${bkp[source_backup_new]}" || true
         ${config[target_shell]} sudo btrfs subvolume delete "${bkp[destination_active_new]}" || true
