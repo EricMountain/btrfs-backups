@@ -175,7 +175,7 @@ for x in * __metadata ; do
 
     echo -- ${x}: Check for an existing backup on the target
     # List backups from most recent to oldest to always pick most recent
-    for d in $(${config[target_shell]} ls -dr1 "${bkp[destination_active_basename]}"* 2> /dev/null) ; do
+    for d in $(${config[target_shell]} ls -dr1 "${bkp[destination_active_basename]}"* 2> /dev/null | grep -v '_latest$') ; do
         bkp[destination_active_last_UUID]=$(${config[target_shell]} sudo btrfs subvol show "${d}" | grep "Received UUID" | awk '{print $3}')
         if [ -n "${bkp[destination_active_last_UUID]}" ] ; then
             break
@@ -215,7 +215,7 @@ for x in * __metadata ; do
 
         echo -- ${x}: Backed up
 
-        ${config[target_shell]} sudo ln -sfT ${bkp[destination_active]} ${bkp[destination_active_basename]}_latest
+        ${config[target_shell]} sudo ln -sfrT ${bkp[destination_active]} ${bkp[destination_active_basename]}_latest
         echo -- ${x}: Created symlink to latest backup
     else
         sudo btrfs subvolume delete "${bkp[source_backup_new]}" || true
