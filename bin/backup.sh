@@ -86,6 +86,12 @@ done
 ionice -c 3 -p $$
 renice -n 20 $$ > /dev/null 2>&1
 
+echo -- Pre-init: waiting for target to become available
+while ! ${config[target_shell]} true ; do
+    echo -- Target is unavailable, retrying later
+    sleep 10
+done
+
 echo -- Init: configuring
 
 config[timestamp]=$(date -u +%Y%m%d-%H%M%S)
