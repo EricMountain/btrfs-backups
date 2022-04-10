@@ -6,7 +6,7 @@ import re
 import subprocess
 import sys
 
-
+# TODO: Make this a parameter
 base = '.'
 
 # Prefix includes backup name + source device UUID
@@ -17,8 +17,6 @@ uuid_matcher = re.compile(r"\s\sUUID:[\s\\t]+([0-9a-f-]+)")
 parent_uuid_matcher = re.compile(r"Parent UUID:[\s\\t]+([0-9a-f-]+)", re.M)
 
 backups = {}
-parent_uuids = {}
-uuids = {}
 chains = {}
 first = {}
 
@@ -55,26 +53,25 @@ for b in backups.keys():
         if not uuid_matches:
             print(f"{snapshot} has no uuid, this can't be right")
             sys.exit(1)
+
         uuid = uuid_matches.group(1)
-        uuids[uuid] = snapshot
 
         if not parent_uuid_matches:
             print(f"{snapshot} has no parent field specified, this can't be right")
             sys.exit(1)
+
         parent_uuid = parent_uuid_matches.group(1)
         if parent_uuid == "-":
-            print(f"{snapshot} has no parent, is first in chain")
+            # No parent, so first in chain
             chains[uuid] = ''
             if b not in first:
                 first[b] = []
             first[b].append(snapshot)
         else:
-            parent_uuids[parent_uuid] = snapshot
             chains[uuid] = parent_uuid
 
 for parent_uuid in chains.values():
     if parent_uuid != '' and parent_uuid not in chains:
-        print(f"{parent_uuid} not present, {parent_uuids[parent_uuid]} is first in chain")
         if b not in first:
             first[b] = []
         first[b].append(snapshot)
@@ -84,8 +81,10 @@ for b in first:
     print(f"{b}")
     for snapshot in first[b]:
         print(f"  {snapshot}")
+print()
 
 print("Latest snapshots per backup group:")
 for b in backups.keys():
     print(f"{b}")
     print(f"  {backups[b][-1:][0]}")
+print()
