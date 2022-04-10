@@ -30,6 +30,10 @@ for d in listdir(base):
     if d.endswith("_latest"):
         continue
 
+    if d.startswith("."):
+        # Skip in-progress backup
+        continue
+
     matches = p.match(d)
     if not matches:
         continue
