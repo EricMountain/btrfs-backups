@@ -88,5 +88,4 @@ for b in first:
 print("Latest snapshots per backup group:")
 for b in backups.keys():
     print(f"{b}")
-    print(f"  {backups[b][-1:]}")
-
+    print(f"  {backups[b][-1:][0]}")
