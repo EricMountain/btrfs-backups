@@ -57,7 +57,7 @@ def print_backups(backups):
 def delete_backups(base, backups):
     for b in backups:
         for snapshot in backups[b]:
-            output = subprocess.run(["echo", "btrfs", "subvol", "del", "-C", join(base, snapshot)], text=True, capture_output=True)
+            output = subprocess.run(["sudo", "btrfs", "subvol", "del", "-C", join(base, snapshot)], text=True, capture_output=True)
             print(f"{output.stdout}")
 
 def main(args):
@@ -67,13 +67,7 @@ def main(args):
         base = join(args.target, "__backups")
 
     backups = list_backups(base)
-    print("Full list of backups:")
-    print_backups(backups)
-
     backups = trim_lists(backups, args.keep)
-    print("Trimmed list:")
-    print_backups(backups)
-
     delete_backups(base, backups)
 
 
